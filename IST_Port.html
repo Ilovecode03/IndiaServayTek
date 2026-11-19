@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INDIA SURVEY TEK | 3D Geodetic Surveying & Civil Engineering Consultants</title>
+
+    <!-- Google Fonts: Plus Jakarta Sans & Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Three.js (3D Terrain, Total Station & Laser Point Cloud) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind Custom Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        geoLight: '#F4F8F7',
+                        emeraldSurvey: '#059669',
+                        laserAmber: '#D97706',
+                        skyTelemetry: '#0284C7',
+                    }
+                }
+            }
+        };
+    </script>
+
+    <!-- Custom Light 3D Spatial & Civil Engineering CSS -->
+    <style>
+        :root {
+            --bg-daylight: #F4F8F7;
+            --emerald-glow: rgba(16, 185, 129, 0.25);
+            --amber-laser: rgba(245, 158, 11, 0.35);
+            --sky-hud: rgba(14, 165, 233, 0.25);
+        }
+
+        body {
+            background-color: var(--bg-daylight);
+            color: #0F172A;
+            overflow-x: hidden;
+            perspective: 1400px;
+        }
+
+        /* Full-Screen Interactive 3D WebGL Canvas */
+        #bg-3d-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: auto;
+            opacity: 0.78;
+        }
+
+        /* Soft Daylight Mist & Blueprint Vignette over Background Images */
+        .hud-vignette {
+            background: radial-gradient(circle at 50% 40%, rgba(248, 250, 252, 0.45) 10%, rgba(241, 247, 245, 0.72) 70%, rgba(236, 245, 242, 0.88) 100%);
+            pointer-events: none;
+        }
+
+        /* Real-World Surveying Background Photo Layers (Bright Daylight Clarity) */
+        #bg-photo-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+            background-color: #EFF6F4;
+        }
+
+        #bg-photo-layer img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.42;
+            filter: contrast(1.04) saturate(1.12) brightness(1.06);
+            transition: opacity 0.75s ease-in-out, transform 14s ease-out;
+            transform: scale(1.03);
+        }
+
+        /* Light 3D Extruded Spatial Panels */
+        .panel-3d {
+            background: linear-gradient(155deg, rgba(255, 255, 255, 0.86) 0%, rgba(244, 250, 248, 0.92) 100%);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(16, 185, 129, 0.28);
+            border-top: 2px solid rgba(14, 165, 233, 0.55);
+            border-left: 1.5px solid rgba(16, 185, 129, 0.45);
+            box-shadow:
+                0 20px 42px -12px rgba(15, 23, 42, 0.12),
+                0 5px 0 rgba(16, 185, 129, 0.18),
+                inset 0 1px 0 rgba(255, 255, 255, 0.95);
+            transform-style: preserve-3d;
+        }
+
+        .card-3d {
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.88) 0%, rgba(246, 251, 249, 0.94) 100%);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(16, 185, 129, 0.24);
+            box-shadow:
+                0 16px 32px -10px rgba(15, 23, 42, 0.1),
+                0 4px 0 rgba(16, 185, 129, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.95);
+            transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.28s ease, box-shadow 0.28s ease;
+            transform-style: preserve-3d;
+            position: relative;
+        }
+
+        .card-3d:hover {
+            border-color: rgba(245, 158, 11, 0.65);
+            box-shadow:
+                0 24px 46px -12px rgba(16, 185, 129, 0.2),
+                0 7px 0 rgba(245, 158, 11, 0.24),
+                inset 0 1px 0 rgba(255, 255, 255, 1);
+        }
+
+        /* 3D Corner Survey Reticles */
+        .reticle-corners::before,
+        .reticle-corners::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .reticle-corners::before {
+            top: 10px;
+            left: 10px;
+            border-top: 2px solid #059669;
+            border-left: 2px solid #059669;
+        }
+
+        .reticle-corners::after {
+            bottom: 10px;
+            right: 10px;
+            border-bottom: 2px solid #D97706;
+            border-right: 2px solid #D97706;
+        }
+
+        /* Light 3D Navigation Bar */
+        .nav-3d {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.22);
+            box-shadow: 0 10px 28px -8px rgba(15, 23, 42, 0.08);
+        }
+
+        /* High-Contrast Daylight Survey Gradient Text */
+        .text-survey-gradient {
+            background: linear-gradient(115deg, #059669 0%, #0284C7 52%, #D97706 100%);
+            -webkit-backg  round-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Light 3D Tactile Extruded Button */
+        .btn-3d-survey {
+            background: linear-gradient(120deg, #10B981 0%, #0EA5E9 55%, #F59E0B 100%);
+            background-size: 180% 180%;
+            background-position: 0% 50%;
+            box-shadow:
+                0 5px 0 #047857,
+                0 12px 24px -4px rgba(16, 185, 129, 0.32),
+                inset 0 1px 0 rgba(255, 255, 255, 0.55);
+            transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .btn-3d-survey:hover {
+            background-position: 100% 50%;
+            transform: translateY(-2px);
+            box-shadow:
+                0 7px 0 #B45309,
+                0 16px 30px -2px rgba(245, 158, 11, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        }
+
+        .btn-3d-survey:active {
+            transform: translateY(3px);
+            box-shadow:
+                0 2px 0 #047857,
+                0 6px 14px -2px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Laser Scanline Bar */
+        .laser-line-top {
+            background: linear-gradient(90deg, transparent 0%, #10B981 25%, #0EA5E9 50%, #F59E0B 75%, transparent 100%);
+        }
+
+        /* Custom Light Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #ECFDF5;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #10B981, #0EA5E9, #F59E0B);
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+
+<body class="antialiased selection:bg-emerald-200 selection:text-emerald-950 relative">
+
+    <!-- Background Surveying Field & Equipment Photography Layer -->
+    <div id="bg-photo-layer">
+        <img id="bgSurveyPhoto"
+            src="https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=1920&q=85"
+            alt="Total Station Land Surveying Field Background"
+            onerror="this.onerror=null; this.src='WhatsApp Image 2026-11-16 at 4.06.18 PM.jpeg';">
+    </div>
+
+    <!-- Interactive 3D Topographical Terrain, Total Station & Survey Tools Canvas -->
+    <canvas id="bg-3d-canvas"></canvas>
+    <div class="fixed inset-0 hud-vignette z-[1]"></div>
+
+    <!-- Floating 3D Scene HUD Controls (Bottom-Left) -->
+    <div
+        class="fixed bottom-4 left-4 z-30 flex flex-wrap items-center gap-2 panel-3d px-3.5 py-2 rounded-2xl text-[11px] font-mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+        <span class="text-slate-700 hidden sm:inline font-semibold">SCENE:</span>
+        <button id="switchBgPhotoBtn"
+            class="px-2.5 py-1 rounded-lg bg-sky-100 text-sky-800 border border-sky-300 hover:bg-sky-200 transition-colors cursor-pointer font-bold">
+            Change BG Photo ↻
+        </button>
+        <button id="toggle3DScanBtn"
+            class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 transition-colors cursor-pointer font-semibold">
+            3D Laser: ON
+        </button>
+        <button id="toggle3DWireframeBtn"
+            class="hidden sm:inline-block px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors cursor-pointer font-semibold">
+            Contour Grid
+        </button>
+    </div>
+
+    <!-- Sticky 3D Header -->
+    <header class="fixed top-0 inset-x-0 z-40 nav-3d transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Brand Logo & Name -->
+                <a href="#" class="flex items-center gap-3 group">
+                    <div
+                        class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#10B981] via-[#0EA5E9] to-[#F59E0B] p-[2px] shadow-md shadow-emerald-500/20 overflow-hidden flex items-center justify-center bg-white">
+                        <img src="WhatsApp Image 2026-11-16 at 4.06.18 PM.jpeg" alt="INDIA SURVEY TEK Logo"
+                            class="w-full h-full object-cover rounded-[10px]"
+                            onerror="this.onerror=null; this.src='https://placehold.co/44x44/FFFFFF/059669?text=IST';">
+                    </div>
+                    <div>
+                        <span
+                            class="font-display font-extrabold text-base sm:text-lg tracking-tight text-slate-900 block leading-none">
+                            INDIA SURVEY TEK<span class="text-survey-gradient">.</span>
+                        </span>
+                        <span class="font-mono text-[10px] text-emerald-700 font-semibold tracking-widest uppercase">3D
+                            Geodetic & Civil</span>
+                    </div>
+                </a>
+
+                <!-- Desktop Navigation Links -->
+                <nav class="hidden md:flex items-center gap-7">
+                    <a href="#services"
+                        class="text-sm font-semibold text-slate-700 hover:text-emerald-600 transition-colors">Services</a>
+                    <a href="#civil-tools"
+                        class="text-sm font-semibold text-slate-700 hover:text-amber-600 transition-colors flex items-center gap-1.5">
+                        <i data-lucide="calculator" class="w-3.5 h-3.5 text-amber-600"></i>
+                        <span>Civil & Survey Tools</span>
+                    </a>
+                    <a href="#portfolio"
+                        class="text-sm font-semibold text-slate-700 hover:text-sky-600 transition-colors">Projects</a>
+                    <a href="#about"
+                        class="text-sm font-semibold text-slate-700 hover:text-emerald-600 transition-colors">Team</a>
+                </nav>
+
+                <!-- Desktop CTA & Mobile Menu Toggle -->
+                <div class="flex items-center gap-3">
+                    <a href="#contact"
+                        class="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white btn-3d-survey">
+                        <span>Book Survey</span>
+                        <i data-lucide="crosshair" class="w-4 h-4"></i>
+                    </a>
+                    <button id="mobileMenuBtn" aria-label="Toggle Menu"
+                        class="md:hidden p-2.5 rounded-xl panel-3d text-slate-800 hover:text-emerald-600 transition-colors">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Dropdown Drawer -->
+        <div id="mobileMenu"
+            class="hidden md:hidden border-t border-emerald-500/20 bg-white/95 backdrop-blur-2xl px-4 pt-3 pb-6 space-y-2 shadow-xl">
+            <a href="#services"
+                class="mobile-nav-link block px-4 py-3 rounded-xl text-base font-semibold text-slate-800 hover:bg-emerald-50 hover:text-emerald-700">Services</a>
+            <a href="#civil-tools"
+                class="mobile-nav-link block px-4 py-3 rounded-xl text-base font-semibold text-slate-800 hover:bg-amber-50 hover:text-amber-700">Civil
+                & Survey Tools</a>
+            <a href="#portfolio"
+                class="mobile-nav-link block px-4 py-3 rounded-xl text-base font-semibold text-slate-800 hover:bg-sky-50 hover:text-sky-700">Projects</a>
+            <a href="#about"
+                class="mobile-nav-link block px-4 py-3 rounded-xl text-base font-semibold text-slate-800 hover:bg-emerald-50 hover:text-emerald-700">Leadership
+                & Team</a>
+            <div class="pt-2">
+                <a href="#contact"
+                    class="mobile-nav-link flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold text-white btn-3d-survey">
+                    <span>Book Survey</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Wrapper -->
+    <main class="relative z-10 pt-28 sm:pt-36 pointer-events-none">
+
+        <!-- Hero Section -->
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 lg:pb-32">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
+
+                <!-- Left Column -->
+                <div class="lg:col-span-7 space-y-8 pointer-events-auto">
+                    <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full panel-3d">
+                        <span class="relative flex h-2.5 w-2.5">
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
+                        </span>
+                        <span
+                            class="text-xs sm:text-sm font-mono font-bold tracking-wider text-emerald-800 uppercase">Government
+                            Approved Surveyors • 3D Spatial</span>
+                    </div>
+
+                    <h1
+                        class="font-display font-extrabold text-4xl sm:text-5xl lg:text-[56px] leading-[1.08] tracking-tight text-slate-900">
+                        Revenue Survey, Engineering Survey & <span class="text-survey-gradient">Mapping
+                            Consulting.</span>
+                    </h1>
+
+                    <p
+                        class="text-base sm:text-lg text-slate-700 max-w-2xl leading-relaxed font-normal bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-emerald-500/25 shadow-sm">
+                        Led by founder <strong class="text-emerald-700">K T Shadakshari</strong> in Bengaluru, <strong
+                            class="text-slate-900">INDIA SURVEY TEK</strong> delivers millimeter-accurate 3D
+                        topographical surveys, contour maps, civil quantity estimates, and statutory government
+                        sketches.
+                    </p>
+
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-1">
+                        <a href="#civil-tools"
+                            class="inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-2xl text-base font-bold text-white btn-3d-survey">
+                            <i data-lucide="compass" class="w-5 h-5"></i>
+                            <span>Launch Civil & Survey Tools</span>
+                        </a>
+                        <a href="tel:7975534053"
+                            class="inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-2xl text-base font-bold text-slate-900 card-3d hover:text-amber-700">
+                            <i data-lucide="phone" class="w-4 h-4 text-emerald-600"></i>
+                            <span class="font-mono">7975534053</span>
+                        </a>
+                    </div>
+
+                    <!-- Interactive Survey Equipment Chips -->
+                    <div class="pt-2 flex flex-wrap items-center gap-3 text-xs font-mono text-slate-800 font-semibold">
+                        <button type="button" data-bg-idx="0"
+                            class="bg-scene-chip px-3.5 py-2 rounded-xl panel-3d hover:border-amber-500 flex items-center gap-2 cursor-pointer transition-all">
+                            <i data-lucide="scan-line" class="w-3.5 h-3.5 text-emerald-600"></i>
+                            <span>Field Total Station BG</span>
+                        </button>
+                        <button type="button" data-bg-idx="1"
+                            class="bg-scene-chip px-3.5 py-2 rounded-xl panel-3d hover:border-amber-500 flex items-center gap-2 cursor-pointer transition-all">
+                            <i data-lucide="map" class="w-3.5 h-3.5 text-sky-600"></i>
+                            <span>CAD Blueprint BG</span>
+                        </button>
+                        <button type="button" data-bg-idx="2"
+                            class="bg-scene-chip px-3.5 py-2 rounded-xl panel-3d hover:border-amber-500 flex items-center gap-2 cursor-pointer transition-all">
+                            <i data-lucide="hard-hat" class="w-3.5 h-3.5 text-amber-600"></i>
+                            <span>Civil Site Survey BG</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Column: 3D Geodetic Total Station & Telemetry Card -->
+                <div class="lg:col-span-5 pointer-events-auto">
+                    <div
+                        class="panel-3d reticle-corners rounded-3xl p-6 sm:p-8 relative overflow-hidden space-y-6 tilt-3d-target">
+                        <div class="absolute top-0 inset-x-0 h-[3px] laser-line-top"></div>
+
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-mono font-bold uppercase tracking-wider text-emerald-700">
+                                    Geodetic Station</p>
+                                <h3 class="font-display font-bold text-lg text-slate-900 mt-0.5">INDIA SURVEY TEK</h3>
+                            </div>
+                            <button id="switchSurveyModeBtn"
+                                class="px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-xs font-mono font-bold text-amber-800 transition-colors cursor-pointer">
+                                Mode ↻
+                            </button>
+                        </div>
+
+                        <p id="heroModeSubtitle" class="text-xs font-mono text-slate-600 -mt-3">Total Station •
+                            Bengaluru HQ</p>
+
+                        <!-- Featured Surveying Image Showcase -->
+                        <div
+                            class="relative rounded-2xl overflow-hidden border border-emerald-500/30 bg-white group shadow-sm">
+                            <img src="WhatsApp Image 2026-11-16 at 4.06.18 PM.jpeg"
+                                alt="INDIA SURVEY TEK Total Station Survey"
+                                class="w-full h-44 object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                                onerror="this.onerror=null; this.src='https://placehold.co/600x240/F0FDF4/059669?text=INDIA+SURVEY+TEK+-+Total+Station';">
+                            <div
+                                class="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-transparent">
+                            </div>
+                            <div class="absolute bottom-3 left-3.5 right-3.5 flex items-center justify-between">
+                                <span class="text-xs font-mono font-bold text-white flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                    <span>Govt. Approved</span>
+                                </span>
+                                <span id="heroAccuracyBadge"
+                                    class="px-2.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-amber-500 text-slate-950">±1.5mm
+                                    Precision</span>
+                            </div>
+                        </div>
+
+                        <!-- Instrument Telemetry Grid -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-4 rounded-2xl bg-emerald-50/90 border border-emerald-200">
+                                <p class="text-[11px] font-mono text-slate-600">Active Instrument</p>
+                                <p id="heroInstrumentName"
+                                    class="font-display font-bold text-base sm:text-lg text-emerald-700 mt-1">Total
+                                    Station</p>
+                            </div>
+                            <div class="p-4 rounded-2xl bg-amber-50/90 border border-amber-200">
+                                <p class="text-[11px] font-mono text-slate-600">Primary Output</p>
+                                <p id="heroDeliverableName"
+                                    class="font-display font-bold text-base sm:text-lg text-amber-700 mt-1">Topo &
+                                    Contour</p>
+                            </div>
+                        </div>
+
+                        <!-- Direct Contact Strip -->
+                        <div class="space-y-2.5 pt-2 border-t border-emerald-500/20 text-xs">
+                            <div class="flex items-center justify-between text-slate-700">
+                                <span>Principal Surveyor</span>
+                                <span class="font-bold text-slate-900">K T Shadakshari</span>
+                            </div>
+                            <div class="flex items-center justify-between text-slate-700">
+                                <span>Survey Team</span>
+                                <span class="font-semibold text-emerald-700">Muruli K P & Devaraju K</span>
+                            </div>
+                            <div class="pt-2">
+                                <a href="mailto:indiasurveytek@gmail.com"
+                                    class="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white btn-3d-survey flex items-center justify-center gap-2">
+                                    <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+                                    <span>indiasurveytek@gmail.com</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Civil Engineering & Land Survey Calculators Suite -->
+        <section id="civil-tools" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 pointer-events-auto">
+            <div class="panel-3d reticle-corners rounded-3xl p-7 sm:p-10 lg:p-12 space-y-8 relative overflow-hidden">
+                <div class="absolute top-0 inset-x-0 h-[3px] laser-line-top"></div>
+
+                <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+                    <div class="space-y-3">
+                        <div
+                            class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100 border border-amber-300 text-xs font-mono font-bold text-amber-800 uppercase tracking-wider">
+                            <i data-lucide="wrench" class="w-3.5 h-3.5"></i>
+                            <span>Interactive Engineering Suite</span>
+                        </div>
+                        <h2 class="font-display font-bold text-3xl sm:text-4xl tracking-tight text-slate-900">
+                            Civil Engineering & <span class="text-survey-gradient">Land Survey Tools.</span>
+                        </h2>
+                        <p class="text-slate-600 text-sm sm:text-base max-w-2xl">
+                            Instant field calculators built for Karnataka revenue land conversions, civil earthwork
+                            cut/fill volumes, and road gradient alignments.
+                        </p>
+                    </div>
+
+                    <!-- Tool Switcher Tabs -->
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" data-tool="area-tool"
+                            class="tool-tab-btn active px-4 py-2.5 rounded-xl text-xs font-mono font-bold btn-3d-survey text-white cursor-pointer">
+                            1. Area & Gunta Converter
+                        </button>
+                        <button type="button" data-tool="earthwork-tool"
+                            class="tool-tab-btn px-4 py-2.5 rounded-xl text-xs font-mono font-semibold bg-white text-slate-700 border border-emerald-300 hover:border-amber-400 cursor-pointer">
+                            2. Cut & Fill Earthwork
+                        </button>
+                        <button type="button" data-tool="slope-tool"
+                            class="tool-tab-btn px-4 py-2.5 rounded-xl text-xs font-mono font-semibold bg-white text-slate-700 border border-emerald-300 hover:border-amber-400 cursor-pointer">
+                            3. Slope & Gradient
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tool 1: Karnataka Land Area & Revenue Unit Converter -->
+                <div id="area-tool" class="civil-tool-panel grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <div class="lg:col-span-5 space-y-5">
+                        <h3 class="font-display font-bold text-xl text-slate-900 flex items-center gap-2">
+                            <i data-lucide="maximize-2" class="w-5 h-5 text-emerald-600"></i>
+                            <span>Revenue Land Area Converter</span>
+                        </h3>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Convert plot & agricultural survey measurements instantly across Karnataka revenue standards
+                            (1 Acre = 40 Guntas = 43,560 Sq.Ft; 1 Gunta = 1,089 Sq.Ft).
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label
+                                    class="block text-[11px] font-mono font-bold text-emerald-800 uppercase mb-1.5">Enter
+                                    Value</label>
+                                <input type="number" id="areaInputVal" value="1" min="0" step="any"
+                                    class="w-full px-4 py-3 rounded-xl bg-white border border-emerald-300 text-slate-900 font-mono text-base font-bold focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-[11px] font-mono font-bold text-emerald-800 uppercase mb-1.5">Input
+                                    Unit</label>
+                                <select id="areaInputUnit"
+                                    class="w-full px-4 py-3 rounded-xl bg-white border border-emerald-300 text-slate-900 font-mono text-sm font-semibold focus:outline-none focus:border-amber-500">
+                                    <option value="acre">Acres</option>
+                                    <option value="gunta">Guntas (Karnataka)</option>
+                                    <option value="sqft">Square Feet (Sq.Ft)</option>
+                                    <option value="sqm">Square Meters (Sq.M)</option>
+                                    <option value="hectare">Hectares</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <div class="card-3d rounded-2xl p-4 border-emerald-300">
+                            <p class="text-[11px] font-mono text-slate-500">Acres</p>
+                            <p id="outAcres" class="font-mono font-bold text-xl text-emerald-700 mt-1">1.0000</p>
+                        </div>
+                        <div class="card-3d rounded-2xl p-4 border-amber-300">
+                            <p class="text-[11px] font-mono text-slate-500">Guntas (1/40 Acre)</p>
+                            <p id="outGuntas" class="font-mono font-bold text-xl text-amber-700 mt-1">40.00</p>
+                        </div>
+                        <div class="card-3d rounded-2xl p-4 border-sky-300">
+                            <p class="text-[11px] font-mono text-slate-500">Square Feet (Sq.Ft)</p>
+                            <p id="outSqFt" class="font-mono font-bold text-xl text-sky-700 mt-1">43,560.00</p>
+                        </div>
+                        <div class="card-3d rounded-2xl p-4 border-emerald-300">
+                            <p class="text-[11px] font-mono text-slate-500">Square Meters (Sq.M)</p>
+                            <p id="outSqM" class="font-mono font-bold text-xl text-slate-900 mt-1">4,046.86</p>
+                        </div>
+                        <div class="card-3d rounded-2xl p-4 border-sky-300">
+                            <p class="text-[11px] font-mono text-slate-500">Hectares</p>
+                            <p id="outHectares" class="font-mono font-bold text-xl text-sky-700 mt-1">0.4047</p>
+                        </div>
+                        <div class="card-3d rounded-2xl p-4 border-amber-300">
+                            <p class="text-[11px] font-mono text-slate-500">Standard 30×40 Sites</p>
+                            <p id="outSites" class="font-mono font-bold text-xl text-amber-700 mt-1">36.30 Sites</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tool 2: Civil Earthwork Cut & Fill Volume Calculator -->
+                <div id="earthwork-tool" class="civil-tool-panel hidden grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <div class="lg:col-span-6 space-y-4">
+                        <h3 class="font-display font-bold text-xl text-slate-900 flex items-center gap-2">
+                            <i data-lucide="layers" class="w-5 h-5 text-amber-600"></i>
+                            <span>Civil Earthwork Cut & Fill Volume Estimator</span>
+                        </h3>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Estimate excavation (Cut) or embankment (Fill) earthwork quantities between Existing Ground
+                            Level (EGL) and Proposed Formation Level (FGL).
+                        </p>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div>
+                                <label
+                                    class="block text-[10px] font-mono font-bold text-slate-700 uppercase mb-1">Length
+                                    (m)</label>
+                                <input type="number" id="ewLength" value="50" min="0" step="any"
+                                    class="w-full px-3 py-2.5 rounded-xl bg-white border border-emerald-300 text-slate-900 font-mono text-sm font-bold">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-mono font-bold text-slate-700 uppercase mb-1">Width
+                                    (m)</label>
+                                <input type="number" id="ewWidth" value="30" min="0" step="any"
+                                    class="w-full px-3 py-2.5 rounded-xl bg-white border border-emerald-300 text-slate-900 font-mono text-sm font-bold">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-mono font-bold text-slate-700 uppercase mb-1">Avg
+                                    EGL (m)</label>
+                                <input type="number" id="ewEgl" value="912.40" step="any"
+                                    class="w-full px-3 py-2.5 rounded-xl bg-white border border-sky-300 text-slate-900 font-mono text-sm font-bold">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-[10px] font-mono font-bold text-slate-700 uppercase mb-1">Target
+                                    FGL (m)</label>
+                                <input type="number" id="ewFgl" value="910.90" step="any"
+                                    class="w-full px-3 py-2.5 rounded-xl bg-white border border-amber-300 text-slate-900 font-mono text-sm font-bold">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="card-3d rounded-2xl p-5 border-emerald-300">
+                            <p class="text-[11px] font-mono text-slate-500">Operation Type</p>
+                            <p id="ewType" class="font-display font-bold text-lg text-amber-700 mt-1">EXCAVATION (CUT)
+                            </p>
+                            <p id="ewDepthDiff" class="text-xs font-mono text-slate-600 mt-1">Δ Elevation: 1.50 m</p>
+                        </div>
+                        <div class="card-3d rounded-2xl p-5 border-sky-300">
+                            <p class="text-[11px] font-mono text-slate-500">Net Volume (m³)</p>
+                            <p id="ewVolCum" class="font-mono font-bold text-2xl text-emerald-700 mt-1">2,250.00 m³</p>
+                            <p class="text-[11px] font-mono text-slate-500 mt-1">Compact Bank Vol.</p>
+                        </div>
+                        <div class="card-3d rounded-2xl p-5 border-amber-300">
+                            <p class="text-[11px] font-mono text-slate-500">Volume in Brass / CFT</p>
+                            <p id="ewVolCft" class="font-mono font-bold text-xl text-sky-700 mt-1">79,458 CFT</p>
+                            <p id="ewVolBrass" class="text-[11px] font-mono text-amber-700 mt-1">≈ 794.58 Brass</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tool 3: Auto-Level Slope, Gradient & Reduced Level (RL) Calculator -->
+                <div id="slope-tool" class="civil-tool-panel hidden grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <div class="lg:col-span-6 space-y-4">
+                        <h3 class="font-display font-bold text-xl text-slate-900 flex items-center gap-2">
+                            <i data-lucide="trending-up" class="w-5 h-5 text-sky-600"></i>
+                            <span>Slope, Gradient & Road Alignment Calculator</span>
+                        </h3>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Compute road camber, drainage slope percentage, gradient ratio (1 in N), and vertical angle
+                            from horizontal distance and elevation rise/fall.
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label
+                                    class="block text-[11px] font-mono font-bold text-sky-800 uppercase mb-1">Horizontal
+                                    Distance (m)</label>
+                                <input type="number" id="slopeDist" value="100" min="0.01" step="any"
+                                    class="w-full px-4 py-2.5 rounded-xl bg-white border border-sky-300 text-slate-900 font-mono text-sm font-bold">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-[11px] font-mono font-bold text-amber-800 uppercase mb-1">Elevation
+                                    Rise / Fall (m)</label>
+                                <input type="number" id="slopeRise" value="2.5" step="any"
+                                    class="w-full px-4 py-2.5 rounded-xl bg-white border border-amber-300 text-slate-900 font-mono text-sm font-bold">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="card-3d rounded-2xl p-5 border-sky-300">
+                            <p class="text-[11px] font-mono text-slate-500">Slope Percentage</p>
+                            <p id="outSlopePct" class="font-mono font-bold text-2xl text-sky-700 mt-1">2.50%</p>
+                        </div>
+                        <div class="card-3d rounded-2xl p-5 border-emerald-300">
+                            <p class="text-[11px] font-mono text-slate-500">Gradient Ratio</p>
+                            <p id="outSlopeRatio" class="font-mono font-bold text-2xl text-emerald-700 mt-1">1 in 40.0
+                            </p>
+                        </div>
+                        <div class="card-3d rounded-2xl p-5 border-amber-300">
+                            <p class="text-[11px] font-mono text-slate-500">Inclination Angle</p>
+                            <p id="outSlopeDeg" class="font-mono font-bold text-2xl text-amber-700 mt-1">1.43°</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services Section (Exact Undertaken Services in 3D Cards) -->
+        <section id="services" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 pointer-events-auto">
+            <div class="max-w-3xl mb-14 space-y-4">
+                <div
+                    class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full panel-3d text-xs font-mono font-bold text-emerald-800 uppercase tracking-wider">
+                    <i data-lucide="check-square" class="w-3.5 h-3.5 text-amber-600"></i>
+                    <span>We Undertake</span>
+                </div>
+                <h2 class="font-display font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight text-slate-900">
+                    Professional Survey & <span class="text-survey-gradient">Mapping Solutions.</span>
+                </h2>
+                <p class="text-slate-600 text-base sm:text-lg">
+                    Rigorous government and private surveying services executed with calibrated instrumentation and
+                    statutory compliance.
+                </p>
+            </div>
+
+            <!-- 3D Bento Grid of Services -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+
+                <!-- Service 1 -->
+                <div
+                    class="md:col-span-7 card-3d reticle-corners rounded-3xl p-7 sm:p-9 flex flex-col justify-between relative overflow-hidden group tilt-3d-target">
+                    <div class="space-y-5 relative z-10">
+                        <div
+                            class="w-12 h-12 rounded-2xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-700">
+                            <i data-lucide="map" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-2xl text-slate-900">Topographical Survey & Contour Map
+                        </h3>
+                        <p class="text-slate-600 leading-relaxed max-w-xl">
+                            Detailed 3D terrain profiling, elevation contour mapping, and spatial feature positioning
+                            for engineering and infrastructure projects.
+                        </p>
+                    </div>
+                    <div class="pt-8 mt-6 border-t border-emerald-500/20 flex flex-wrap gap-2 relative z-10">
+                        <span
+                            class="px-3 py-1 rounded-lg text-xs font-mono font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">Topographical
+                            Survey</span>
+                        <span
+                            class="px-3 py-1 rounded-lg text-xs font-mono font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">Contour
+                            Map</span>
+                    </div>
+                </div>
+
+                <!-- Service 2 -->
+                <div
+                    class="md:col-span-5 card-3d reticle-corners rounded-3xl p-7 sm:p-9 flex flex-col justify-between relative overflow-hidden group tilt-3d-target">
+                    <div class="space-y-5 relative z-10">
+                        <div
+                            class="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700">
+                            <i data-lucide="ruler" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-2xl text-slate-900">Quantities Survey & Settingout Work
+                        </h3>
+                        <p class="text-slate-600 leading-relaxed">
+                            Accurate earthwork volume estimation and precise on-site construction settingout for
+                            builders and civil contractors.
+                        </p>
+                    </div>
+                    <div class="pt-8 mt-6 border-t border-amber-500/20 flex flex-wrap gap-2 relative z-10">
+                        <span
+                            class="px-3 py-1 rounded-lg text-xs font-mono font-semibold bg-amber-100 text-amber-800 border border-amber-300">Quantities
+                            Survey</span>
+                        <span
+                            class="px-3 py-1 rounded-lg text-xs font-mono font-semibold bg-amber-100 text-amber-800 border border-amber-300">Settingout
+                            Work</span>
+                    </div>
+                </div>
+
+                <!-- Service 3 -->
+                <div
+                    class="md:col-span-5 card-3d reticle-corners rounded-3xl p-7 sm:p-9 flex flex-col justify-between relative overflow-hidden group tilt-3d-target">
+                    <div class="space-y-5 relative z-10">
+                        <div
+                            class="w-12 h-12 rounded-2xl bg-sky-100 border border-sky-300 flex items-center justify-center text-sky-700">
+                            <i data-lucide="grid" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-2xl text-slate-900">Layouts Designs and Marking</h3>
+                        <p class="text-slate-600 leading-relaxed">
+                            Comprehensive layout planning, demarcation, and precise site boundary marking as per
+                            statutory approvals.
+                        </p>
+                    </div>
+                    <div class="pt-8 mt-6 border-t border-sky-500/20 flex flex-wrap gap-2 relative z-10">
+                        <span
+                            class="px-3 py-1 rounded-lg text-xs font-mono font-semibold bg-sky-100 text-sky-800 border border-sky-300">Layout
+                            Design</span>
+                        <span
+                            class="px-3 py-1 rounded-lg text-xs font-mono font-semibold bg-sky-100 text-sky-800 border border-sky-300">Marking</span>
+                    </div>
+                </div>
+
+                <!-- Service 4 -->
+                <div
+                    class="md:col-span-7 card-3d reticle-corners rounded-3xl p-7 sm:p-9 flex flex-col justify-between relative overflow-hidden group tilt-3d-target">
+                    <div class="space-y-5 relative z-10">
+                        <div
+                            class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-100 via-sky-100 to-amber-100 border border-emerald-300 flex items-center justify-center text-emerald-700">
+                            <i data-lucide="file-check" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-2xl text-slate-900">Township Survey & Government Sketches
+                        </h3>
+                        <p class="text-slate-600 leading-relaxed max-w-xl">
+                            Large-scale township surveys and official documentation including Registration Sketches,
+                            Khatha Sketches, Poodi, and mapping consulting.
+                        </p>
+                    </div>
+                    <div class="pt-8 mt-6 border-t border-emerald-500/20 flex flex-wrap gap-2 relative z-10">
+                        <span
+                            class="px-3 py-1 rounded-lg text-xs font-mono font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">Township
+                            & Estate</span>
+                        <span
+                            class="px-3 py-1 rounded-lg text-xs font-mono font-semibold bg-sky-100 text-sky-800 border border-sky-300">Khatha
+                            & Registration Sketch</span>
+                        <span
+                            class="px-3 py-1 rounded-lg text-xs font-mono font-semibold bg-amber-100 text-amber-800 border border-amber-300">Poodi
+                            Work</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Portfolio Showcase Section -->
+        <section id="portfolio" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 pointer-events-auto">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-14">
+                <div class="max-w-2xl space-y-4">
+                    <div
+                        class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full panel-3d text-xs font-mono font-bold text-amber-800 uppercase tracking-wider">
+                        <i data-lucide="folder-kanban" class="w-3.5 h-3.5 text-emerald-600"></i>
+                        <span>Project Portfolio</span>
+                    </div>
+                    <h2 class="font-display font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight text-slate-900">
+                        Government & Private <span class="text-survey-gradient">Survey Portfolio.</span>
+                    </h2>
+                </div>
+
+                <!-- Filter Pills -->
+                <div id="portfolioFilters" class="flex flex-wrap gap-2.5">
+                    <button data-filter="all"
+                        class="filter-btn active px-4 py-2.5 rounded-xl text-sm font-bold transition-all btn-3d-survey text-white cursor-pointer">
+                        All
+                    </button>
+                    <button data-filter="Government"
+                        class="filter-btn px-4 py-2.5 rounded-xl text-sm font-semibold transition-all panel-3d text-slate-700 hover:text-slate-950 cursor-pointer">
+                        Government
+                    </button>
+                    <button data-filter="Private"
+                        class="filter-btn px-4 py-2.5 rounded-xl text-sm font-semibold transition-all panel-3d text-slate-700 hover:text-slate-950 cursor-pointer">
+                        Private
+                    </button>
+                    <button data-filter="Mapping"
+                        class="filter-btn px-4 py-2.5 rounded-xl text-sm font-semibold transition-all panel-3d text-slate-700 hover:text-slate-950 cursor-pointer">
+                        Mapping Consulting
+                    </button>
+                </div>
+            </div>
+
+            <!-- Portfolio Grid -->
+            <div id="portfolioGrid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Injected via JavaScript -->
+            </div>
+        </section>
+
+        <!-- Leadership & Team Section (K T Shadakshari, Muruli K P, Devaraju K) -->
+        <section id="about" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 pointer-events-auto">
+            <div class="panel-3d reticle-corners rounded-3xl p-8 sm:p-12 lg:p-14 space-y-12 relative overflow-hidden">
+                <div class="absolute top-0 inset-x-0 h-[3px] laser-line-top"></div>
+
+                <div class="max-w-2xl space-y-4">
+                    <div
+                        class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100 border border-emerald-300 text-xs font-mono font-bold text-emerald-800 uppercase tracking-wider">
+                        <i data-lucide="users" class="w-3.5 h-3.5 text-amber-600"></i>
+                        <span>Leadership & Team</span>
+                    </div>
+                    <h2 class="font-display font-bold text-3xl sm:text-4xl tracking-tight text-slate-900">
+                        Meet the Experts Behind <span class="text-survey-gradient">INDIA SURVEY TEK.</span>
+                    </h2>
+                    <p class="text-slate-600 text-base">
+                        Years of combined expertise in revenue surveys, civil engineering measurements, and statutory
+                        mapping consulting.
+                    </p>
+                </div>
+
+                <!-- Team Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Owner / Founder -->
+                    <div class="card-3d rounded-2xl p-6 space-y-4 border-emerald-300 tilt-3d-target">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-700">
+                            <i data-lucide="award" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-bold text-xl text-slate-900">K T Shadakshari</h3>
+                            <p class="text-xs font-mono font-bold text-emerald-700 mt-1">Founder & Principal Surveyor
+                            </p>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Leading government-approved revenue surveys, township layouts, and land mapping consulting
+                            with uncompromising accuracy.
+                        </p>
+                    </div>
+
+                    <!-- Co-Worker 1 -->
+                    <div class="card-3d rounded-2xl p-6 space-y-4 border-sky-300 tilt-3d-target">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-sky-100 border border-sky-300 flex items-center justify-center text-sky-700">
+                            <i data-lucide="user-check" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-bold text-xl text-slate-900">Muruli K P</h3>
+                            <p class="text-xs font-mono font-bold text-sky-700 mt-1">Senior Survey Specialist</p>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Expert in topographical profiling, contour mapping, quantity estimation, and on-site civil
+                            settingout operations.
+                        </p>
+                    </div>
+
+                    <!-- Co-Worker 2 -->
+                    <div class="card-3d rounded-2xl p-6 space-y-4 border-amber-300 tilt-3d-target">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700">
+                            <i data-lucide="user-check" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-bold text-xl text-slate-900">Devaraju K</h3>
+                            <p class="text-xs font-mono font-bold text-amber-700 mt-1">Survey & Sketch Engineer</p>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Specializes in layout marking, boundary demarcation, Khatha sketches, and official
+                            registration documentation.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 pointer-events-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+
+                <div class="lg:col-span-5 space-y-8">
+                    <div class="space-y-4">
+                        <div
+                            class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full panel-3d text-xs font-mono font-bold text-amber-800 uppercase tracking-wider">
+                            <i data-lucide="mail-open" class="w-3.5 h-3.5 text-emerald-600"></i>
+                            <span>Get in Touch</span>
+                        </div>
+                        <h2
+                            class="font-display font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight text-slate-900">
+                            Book Your <span class="text-survey-gradient">Survey Consultation.</span>
+                        </h2>
+                        <p class="text-slate-600 text-base leading-relaxed">
+                            Contact INDIA SURVEY TEK for government and private revenue surveys, topographical mapping,
+                            and statutory sketches in Bengaluru and across India.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="card-3d rounded-2xl p-5 flex items-center gap-4">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-700">
+                                <i data-lucide="mail" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-mono text-slate-500">Official Email</p>
+                                <a href="mailto:indiasurveytek@gmail.com"
+                                    class="text-sm font-bold text-slate-900 hover:text-emerald-700 transition-colors">indiasurveytek@gmail.com</a>
+                            </div>
+                        </div>
+
+                        <div class="card-3d rounded-2xl p-5 flex items-center gap-4">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700">
+                                <i data-lucide="phone-call" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-mono text-slate-500">Direct Telephone</p>
+                                <a href="tel:7975534053"
+                                    class="text-sm font-mono font-bold text-slate-900 hover:text-amber-700 transition-colors">7975534053</a>
+                            </div>
+                        </div>
+
+                        <div class="card-3d rounded-2xl p-5 flex items-center gap-4">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-sky-100 border border-sky-300 flex items-center justify-center text-sky-700 shrink-0">
+                                <i data-lucide="map-pin" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-mono text-slate-500">Headquarters • Mon–Sat: 8 AM – 9 PM</p>
+                                <p class="text-sm font-bold text-slate-900">Diesel Loco Shed Rd, Duravani Nagar,
+                                    Krishnarajapuram, Bengaluru, Karnataka 560036</p>
+                            </div>
+                        </div>
+
+                        <!-- Interactive Google Maps Card -->
+                        <div class="card-3d reticle-corners rounded-2xl p-3 space-y-2.5 overflow-hidden">
+                            <div class="flex items-center justify-between px-1.5 pt-1">
+                                <span
+                                    class="text-[11px] font-mono font-bold text-emerald-800 uppercase flex items-center gap-1.5">
+                                    <i data-lucide="navigation" class="w-3.5 h-3.5 text-amber-600"></i>
+                                    <span>INDIA SURVEY TEK • KR Puram, Bengaluru</span>
+                                </span>
+                                <a href="https://share.google/Tq8RqxadwEF9GvKZM" target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="text-[11px] font-mono font-bold text-sky-700 hover:text-amber-700 flex items-center gap-1 transition-colors">
+                                    <span>Open in Google Maps</span>
+                                    <i data-lucide="external-link" class="w-3 h-3"></i>
+                                </a>
+                            </div>
+                            <div
+                                class="w-full h-56 rounded-xl overflow-hidden border border-emerald-500/25 shadow-inner bg-emerald-50">
+                                <iframe title="INDIA SURVEY TEK Location Map"
+                                    src="https://maps.google.com/maps?q=INDIA%20SURVEY%20TEK%2C%20Diesel%20Loco%20Shed%20Rd%2C%20Duravani%20Nagar%2C%20Krishnarajapuram%2C%20Bengaluru%2C%20Karnataka%20560036&t=&z=16&ie=UTF8&iwloc=&output=embed"
+                                    class="w-full h-full border-0" loading="lazy"
+                                    referrerpolicy="no-referrer-when-downgrade">
+                                </iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="border-t border-emerald-500/20 bg-white/90 py-12 pointer-events-auto">
+            <div
+                class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#10B981] via-[#0EA5E9] to-[#F59E0B] p-[1.5px] overflow-hidden flex items-center justify-center bg-white">
+                        <img src="WhatsApp Image 2026-11-16 at 4.06.18 PM.jpeg" alt="Logo"
+                            class="w-full h-full object-cover rounded-[7px]"
+                            onerror="this.onerror=null; this.src='https://placehold.co/32x32/FFFFFF/059669?text=IST';">
+                    </div>
+                    <span class="font-display font-bold text-sm text-slate-900">INDIA SURVEY TEK<span
+                            class="text-survey-gradient">.</span></span>
+                </div>
+                <p class="text-xs text-slate-600 text-center">
+                    &copy; 2026 INDIA SURVEY TEK. Government Approved Surveyors. Led by K T Shadakshari. All rights
+                    reserved.
+                </p>
+                <div class="flex items-center gap-4 text-xs text-slate-600 font-medium">
+                    <a href="#services" class="hover:text-emerald-600 transition-colors">Services</a>
+                    <a href="#civil-tools" class="hover:text-amber-600 transition-colors">Civil Tools</a>
+                    <a href="#portfolio" class="hover:text-sky-600 transition-colors">Projects</a>
+                </div>
+            </div>
+        </footer>
+
+    </main>
+
+    <!-- Case Study Modal Template -->
+    <div id="caseStudyModal"
+        class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/45 backdrop-blur-md">
+        <div id="modalContentBox"
+            class="panel-3d reticle-corners rounded-3xl max-w-2xl w-full p-8 relative space-y-6 max-h-[90vh] overflow-y-auto">
+            <button id="closeModalBtn"
+                class="absolute top-6 right-6 p-2 rounded-full panel-3d text-slate-600 hover:text-slate-950 cursor-pointer">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <div class="space-y-2">
+                <span id="modalCategory"
+                    class="px-3 py-1 rounded-lg text-xs font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300"></span>
+                <h3 id="modalTitle" class="font-display font-bold text-2xl sm:text-3xl text-slate-900"></h3>
+                <p id="modalClient" class="text-sm font-mono font-semibold text-amber-700"></p>
+            </div>
+            <div class="space-y-4 text-sm text-slate-600 leading-relaxed">
+                <div>
+                    <h4 class="font-bold text-slate-900 mb-1">Project Scope & Challenge</h4>
+                    <p id="modalChallenge"></p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-900 mb-1">Execution & Methodology</h4>
+                    <p id="modalSolution"></p>
+                </div>
+            </div>
+            <div id="modalTags" class="flex flex-wrap gap-2 pt-2"></div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application & 3D Three.js Engine -->
+    <script>
+        // ==========================================
+        // 1. THREE.JS 3D SURVEYING & TERRAIN ENGINE (LIGHT THEME)
+        // ==========================================
+        function init3DSurveyBackground() {
+            const canvas = document.getElementById('bg-3d-canvas');
+            if (!canvas || typeof THREE === 'undefined') return;
+
+            const scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0xf4f8f7, 0.016);
+
+            const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
+            camera.position.set(0, 14, 28);
+            camera.lookAt(0, 0, 0);
+
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // Bright Daylight Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0x0284c7, 1.1);
+            dirLight.position.set(15, 25, 15);
+            scene.add(dirLight);
+
+            const amberPointLight = new THREE.PointLight(0xd97706, 1.8, 40);
+            amberPointLight.position.set(0, 6, 0);
+            scene.add(amberPointLight);
+
+            // 3D Topographical Digital Elevation Model (DEM) Terrain Mesh
+            const terrainGeo = new THREE.PlaneGeometry(75, 75, 64, 64);
+            terrainGeo.rotateX(-Math.PI / 2);
+            const posAttr = terrainGeo.attributes.position;
+
+            for (let i = 0; i < posAttr.count; i++) {
+                const x = posAttr.getX(i);
+                const z = posAttr.getZ(i);
+                const y = Math.sin(x * 0.14) * Math.cos(z * 0.14) * 3.2 + Math.sin(x * 0.3 + z * 0.25) * 1.1;
+                posAttr.setY(i, y);
+            }
+            terrainGeo.computeVertexNormals();
+
+            const terrainWireMat = new THREE.MeshBasicMaterial({
+                color: 0x059669,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.28
+            });
+            const terrainMesh = new THREE.Mesh(terrainGeo, terrainWireMat);
+            terrainMesh.position.y = -3.5;
+            scene.add(terrainMesh);
+
+            // Light soft pastel terrain underside
+            const terrainSolidMat = new THREE.MeshStandardMaterial({
+                color: 0xe6f4f0,
+                roughness: 0.85,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.45,
+                polygonOffset: true,
+                polygonOffsetFactor: 1,
+                polygonOffsetUnits: 1
+            });
+            const terrainSolid = new THREE.Mesh(terrainGeo, terrainSolidMat);
+            terrainSolid.position.y = -3.52;
+            scene.add(terrainSolid);
+
+            // 3D Total Station Instrument & Tripod Assembly
+            const totalStationGroup = new THREE.Group();
+            totalStationGroup.position.set(9, -1.2, 4);
+
+            const legMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.4, roughness: 0.3 });
+            for (let i = 0; i < 3; i++) {
+                const angle = (i * Math.PI * 2) / 3;
+                const legGeo = new THREE.CylinderGeometry(0.08, 0.05, 4.2, 8);
+                const leg = new THREE.Mesh(legGeo, legMat);
+                leg.position.set(Math.cos(angle) * 0.8, 1.8, Math.sin(angle) * 0.8);
+                leg.rotation.z = Math.cos(angle) * 0.28;
+                leg.rotation.x = -Math.sin(angle) * 0.28;
+                totalStationGroup.add(leg);
+            }
+
+            const basePlate = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.65, 0.7, 0.22, 16),
+                new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6, roughness: 0.2 })
+            );
+            basePlate.position.y = 3.85;
+            totalStationGroup.add(basePlate);
+
+            const headGroup = new THREE.Group();
+            headGroup.position.y = 4.55;
+
+            const bodyBox = new THREE.Mesh(
+                new THREE.BoxGeometry(0.95, 1.1, 0.75),
+                new THREE.MeshStandardMaterial({ color: 0x059669, metalness: 0.3, roughness: 0.3 })
+            );
+            headGroup.add(bodyBox);
+
+            const lens = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.24, 0.28, 1.25, 16),
+                new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.2 })
+            );
+            lens.rotation.x = Math.PI / 2;
+            headGroup.add(lens);
+
+            const laserBeamGeo = new THREE.CylinderGeometry(0.03, 0.05, 34, 8);
+            laserBeamGeo.rotateX(Math.PI / 2);
+            laserBeamGeo.translate(0, 0, 17);
+            const laserBeamMat = new THREE.MeshBasicMaterial({
+                color: 0xd97706,
+                transparent: true,
+                opacity: 0.75
+            });
+            const laserBeam = new THREE.Mesh(laserBeamGeo, laserBeamMat);
+            headGroup.add(laserBeam);
+
+            totalStationGroup.add(headGroup);
+            scene.add(totalStationGroup);
+
+            // Floating 3D Survey Prisms & Geodetic Benchmark Beacons
+            const beacons = [];
+            const beaconCoords = [
+                [-12, 1.5, -6],
+                [-6, 0.8, 10],
+                [15, 2.0, -10],
+                [-16, 2.2, 6],
+                [4, 1.0, -14]
+            ];
+
+            beaconCoords.forEach(([bx, by, bz]) => {
+                const prismGroup = new THREE.Group();
+                prismGroup.position.set(bx, by, bz);
+
+                const prism = new THREE.Mesh(
+                    new THREE.OctahedronGeometry(0.55, 0),
+                    new THREE.MeshStandardMaterial({
+                        color: 0x0284c7,
+                        emissive: 0x0ea5e9,
+                        emissiveIntensity: 0.35
+                    })
+                );
+                prismGroup.add(prism);
+
+                const ring = new THREE.Mesh(
+                    new THREE.RingGeometry(0.85, 0.95, 24),
+                    new THREE.MeshBasicMaterial({ color: 0xd97706, side: THREE.DoubleSide })
+                );
+                ring.rotation.x = Math.PI / 2;
+                prismGroup.add(ring);
+
+                const plumbGeo = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(0, -5, 0),
+                    new THREE.Vector3(0, 4, 0)
+                ]);
+                const plumbLine = new THREE.Line(
+                    plumbGeo,
+                    new THREE.LineBasicMaterial({ color: 0x0284c7, transparent: true, opacity: 0.55 })
+                );
+                prismGroup.add(plumbLine);
+
+                scene.add(prismGroup);
+                beacons.push({ group: prismGroup, prism, baseY: by });
+            });
+
+            // LiDAR Point Cloud Particles
+            const particleCount = 450;
+            const pGeo = new THREE.BufferGeometry();
+            const pPositions = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount; i++) {
+                pPositions[i * 3] = (Math.random() - 0.5) * 65;
+                pPositions[i * 3 + 1] = Math.random() * 14 - 2;
+                pPositions[i * 3 + 2] = (Math.random() - 0.5) * 65;
+            }
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+            const pMat = new THREE.PointsMaterial({ color: 0x0284c7, size: 0.18, transparent: true, opacity: 0.65 });
+            const pointCloud = new THREE.Points(pGeo, pMat);
+            scene.add(pointCloud);
+
+            // Mouse Parallax & Interactive Camera Drag
+            let mouseX = 0, mouseY = 0;
+            let isDragging = false;
+            let prevMouseX = 0;
+            let cameraAngleOffset = 0;
+
+            window.addEventListener('mousemove', (e) => {
+                mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+                mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+                if (isDragging) {
+                    const deltaX = e.clientX - prevMouseX;
+                    cameraAngleOffset += deltaX * 0.005;
+                    prevMouseX = e.clientX;
+                }
+            });
+
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                prevMouseX = e.clientX;
+            });
+            window.addEventListener('mouseup', () => { isDragging = false; });
+
+            // HUD Toggle Buttons
+            let laserActive = true;
+            const scanBtn = document.getElementById('toggle3DScanBtn');
+            if (scanBtn) {
+                scanBtn.addEventListener('click', () => {
+                    laserActive = !laserActive;
+                    laserBeam.visible = laserActive;
+                    scanBtn.textContent = laserActive ? '3D Laser: ON' : '3D Laser: OFF';
+                });
+            }
+
+            const wireBtn = document.getElementById('toggle3DWireframeBtn');
+            if (wireBtn) {
+                wireBtn.addEventListener('click', () => {
+                    terrainWireMat.color.setHex(terrainWireMat.color.getHex() === 0x059669 ? 0x0284c7 : 0x059669);
+                });
+            }
+
+            // Background Surveying Field Images Switcher + Auto-Cycle
+            const surveyBgImages = [
+                "https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=1920&q=85",
+                "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1920&q=85",
+                "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1920&q=85",
+                "WhatsApp Image 2026-11-16 at 4.06.18 PM.jpeg"
+            ];
+            let currentBgIdx = 0;
+            const bgPhotoEl = document.getElementById('bgSurveyPhoto');
+            const switchBgPhotoBtn = document.getElementById('switchBgPhotoBtn');
+
+            function setBackgroundPhoto(index) {
+                if (!bgPhotoEl) return;
+                currentBgIdx = index % surveyBgImages.length;
+                bgPhotoEl.style.opacity = '0.12';
+                setTimeout(() => {
+                    bgPhotoEl.src = surveyBgImages[currentBgIdx];
+                    bgPhotoEl.style.opacity = '0.42';
+                }, 280);
+            }
+
+            function cycleBackgroundPhoto() {
+                setBackgroundPhoto(currentBgIdx + 1);
+            }
+
+            if (switchBgPhotoBtn) {
+                switchBgPhotoBtn.addEventListener('click', cycleBackgroundPhoto);
+            }
+            document.querySelectorAll('.bg-scene-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const idx = parseInt(chip.dataset.bgIdx, 10) || 0;
+                    setBackgroundPhoto(idx);
+                });
+            });
+            setInterval(cycleBackgroundPhoto, 14000);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            const clock = new THREE.Clock();
+            function animate() {
+                requestAnimationFrame(animate);
+                const elapsed = clock.getElapsedTime();
+
+                if (laserActive) {
+                    headGroup.rotation.y = Math.sin(elapsed * 0.65) * 1.35;
+                }
+
+                beacons.forEach((b, idx) => {
+                    b.prism.rotation.y = elapsed * 1.4 + idx;
+                    b.group.position.y = b.baseY + Math.sin(elapsed * 1.5 + idx) * 0.35;
+                });
+
+                pointCloud.rotation.y = elapsed * 0.03;
+
+                const scrollFactor = window.scrollY * 0.003;
+                const orbitAngle = cameraAngleOffset + Math.sin(elapsed * 0.12) * 0.18 + mouseX * 0.15;
+                camera.position.x = Math.sin(orbitAngle) * 28;
+                camera.position.z = Math.cos(orbitAngle) * 28;
+                camera.position.y = 13 + mouseY * 2.5 - Math.min(scrollFactor, 4);
+                camera.lookAt(0, -1, 0);
+
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+
+        // ==========================================
+        // 2. 3D CARD TILT INTERACTION
+        // ==========================================
+        function init3DCardTilt() {
+            document.querySelectorAll('.tilt-3d-target').forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    const rotateX = ((y - centerY) / centerY) * -4.5;
+                    const rotateY = ((x - centerX) / centerX) * 4.5;
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+                });
+
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)';
+                });
+            });
+        }
+
+        // ==========================================
+        // 3. CIVIL ENGINEERING & SURVEY TOOLS LOGIC
+        // ==========================================
+        function initCivilTools() {
+            document.querySelectorAll('.tool-tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tool-tab-btn').forEach(b => {
+                        b.classList.remove('btn-3d-survey', 'text-white');
+                        b.classList.add('bg-white', 'text-slate-700', 'border', 'border-emerald-300');
+                    });
+                    btn.classList.remove('bg-white', 'text-slate-700', 'border', 'border-emerald-300');
+                    btn.classList.add('btn-3d-survey', 'text-white');
+
+                    document.querySelectorAll('.civil-tool-panel').forEach(panel => {
+                        panel.classList.add('hidden');
+                        panel.classList.remove('grid');
+                    });
+                    const target = document.getElementById(btn.dataset.tool);
+                    if (target) {
+                        target.classList.remove('hidden');
+                        target.classList.add('grid');
+                    }
+                });
+            });
+
+            // Tool 1: Land Area & Gunta Converter
+            const areaVal = document.getElementById('areaInputVal');
+            const areaUnit = document.getElementById('areaInputUnit');
+            function updateAreaConversion() {
+                const val = parseFloat(areaVal.value) || 0;
+                const unit = areaUnit.value;
+                let sqFt = 0;
+
+                if (unit === 'acre') sqFt = val * 43560;
+                else if (unit === 'gunta') sqFt = val * 1089;
+                else if (unit === 'sqft') sqFt = val;
+                else if (unit === 'sqm') sqFt = val * 10.7639104;
+                else if (unit === 'hectare') sqFt = val * 107639.104;
+
+                const acres = sqFt / 43560;
+                const guntas = sqFt / 1089;
+                const sqM = sqFt / 10.7639104;
+                const hectares = sqFt / 107639.104;
+                const sites30x40 = sqFt / 1200;
+
+                document.getElementById('outAcres').textContent = acres.toLocaleString('en-IN', { maximumFractionDigits: 4 });
+                document.getElementById('outGuntas').textContent = guntas.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+                document.getElementById('outSqFt').textContent = sqFt.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+                document.getElementById('outSqM').textContent = sqM.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+                document.getElementById('outHectares').textContent = hectares.toLocaleString('en-IN', { maximumFractionDigits: 4 });
+                document.getElementById('outSites').textContent = sites30x40.toLocaleString('en-IN', { maximumFractionDigits: 2 }) + ' Sites';
+            }
+            areaVal.addEventListener('input', updateAreaConversion);
+            areaUnit.addEventListener('change', updateAreaConversion);
+
+            // Tool 2: Cut & Fill Earthwork Estimator
+            const ewInputs = ['ewLength', 'ewWidth', 'ewEgl', 'ewFgl'];
+            function updateEarthwork() {
+                const L = parseFloat(document.getElementById('ewLength').value) || 0;
+                const W = parseFloat(document.getElementById('ewWidth').value) || 0;
+                const egl = parseFloat(document.getElementById('ewEgl').value) || 0;
+                const fgl = parseFloat(document.getElementById('ewFgl').value) || 0;
+
+                const diff = egl - fgl;
+                const absDiff = Math.abs(diff);
+                const volCum = L * W * absDiff;
+                const volCft = volCum * 35.3147;
+                const volBrass = volCft / 100;
+
+                const typeEl = document.getElementById('ewType');
+                if (diff > 0) {
+                    typeEl.textContent = 'EXCAVATION (CUT)';
+                    typeEl.className = 'font-display font-bold text-lg text-amber-700 mt-1';
+                } else if (diff < 0) {
+                    typeEl.textContent = 'EMBANKMENT (FILL)';
+                    typeEl.className = 'font-display font-bold text-lg text-sky-700 mt-1';
+                } else {
+                    typeEl.textContent = 'BALANCED LEVEL';
+                    typeEl.className = 'font-display font-bold text-lg text-emerald-700 mt-1';
+                }
+
+                document.getElementById('ewDepthDiff').textContent = `Δ Elevation: ${absDiff.toFixed(2)} m`;
+                document.getElementById('ewVolCum').textContent = `${volCum.toLocaleString('en-IN', { maximumFractionDigits: 2 })} m³`;
+                document.getElementById('ewVolCft').textContent = `${Math.round(volCft).toLocaleString('en-IN')} CFT`;
+                document.getElementById('ewVolBrass').textContent = `≈ ${volBrass.toLocaleString('en-IN', { maximumFractionDigits: 2 })} Brass`;
+            }
+            ewInputs.forEach(id => document.getElementById(id).addEventListener('input', updateEarthwork));
+
+            // Tool 3: Slope & Gradient Calculator
+            function updateSlope() {
+                const dist = parseFloat(document.getElementById('slopeDist').value) || 0.01;
+                const rise = parseFloat(document.getElementById('slopeRise').value) || 0;
+                const pct = (rise / dist) * 100;
+                const ratio = rise !== 0 ? Math.abs(dist / rise) : 0;
+                const deg = Math.atan(rise / dist) * (180 / Math.PI);
+
+                document.getElementById('outSlopePct').textContent = `${pct.toFixed(2)}%`;
+                document.getElementById('outSlopeRatio').textContent = rise !== 0 ? `1 in ${ratio.toFixed(1)}` : 'Flat (0)';
+                document.getElementById('outSlopeDeg').textContent = `${deg.toFixed(2)}°`;
+            }
+            document.getElementById('slopeDist').addEventListener('input', updateSlope);
+            document.getElementById('slopeRise').addEventListener('input', updateSlope);
+        }
+
+        // ==========================================
+        // 4. HERO SURVEY MODE SWITCHER & PORTFOLIO
+        // ==========================================
+        const surveyModes = [
+            {
+                subtitle: "Total Station • Bengaluru HQ",
+                accuracy: "±1.5mm Precision",
+                instrument: "Total Station",
+                deliverable: "Topo & Contour"
+            },
+            {
+                subtitle: "RTK GNSS • Satellite Positioning",
+                accuracy: "±8mm Geodetic",
+                instrument: "DGPS / RTK",
+                deliverable: "Layout & Poodi"
+            },
+            {
+                subtitle: "Engineering • Volume & Alignment",
+                accuracy: "99.9% Verified",
+                instrument: "Auto Level & CAD",
+                deliverable: "Quantities & Sketch"
+            }
+        ];
+        let currentSurveyModeIndex = 0;
+
+        const projectsData = [
+            {
+                id: 1,
+                title: "National Highway Corridor LiDAR & Topo Survey",
+                category: "Government",
+                client: "National Infrastructure Dept.",
+                metric: "120 km Corridor",
+                challenge: "Demanding tight tolerances across hilly terrain requiring millimeter-level precision.",
+                solution: "Deployed RTK GNSS and Robotic Total Stations to generate precise 3D contour maps and alignment profiles.",
+                tags: ["Topographical Survey", "Contour Map", "Settingout Work"]
+            },
+            {
+                id: 2,
+                title: "Premium Residential Township Layout Demarcation",
+                category: "Private",
+                client: "Urban Developers Pvt Ltd",
+                metric: "250 Acres",
+                challenge: "Subdividing large agricultural land into approved residential plots with exact boundary markers.",
+                solution: "Conducted complete layout design, boundary marking, and statutory registration sketch mapping.",
+                tags: ["Layouts & Marking", "Township Survey", "Registration Sketch"]
+            },
+            {
+                id: 3,
+                title: "Commercial Complex Earthwork Quantities Estimation",
+                category: "Private",
+                client: "BuildCorp Infra",
+                metric: "45,000 m³ Volume",
+                challenge: "Complex excavation volume calculations needed prior to multi-level basement construction.",
+                solution: "Performed rigorous quantities survey and cross-sectional profiling to eliminate variance.",
+                tags: ["Quantities Survey", "Volume Calculation", "Engineering"]
+            },
+            {
+                id: 4,
+                title: "Revenue Land Verification & Poodi Documentation",
+                category: "Mapping",
+                client: "District Revenue Authority",
+                metric: "1,200 Plots",
+                challenge: "Resolving overlapping boundaries and generating updated Khatha sketches for landowners.",
+                solution: "Executed meticulous revenue surveys and compiled certified Poodi and Khatha sketches.",
+                tags: ["Revenue Survey", "Khatha Sketch", "Poodi Work"]
+            }
+        ];
+
+        function renderPortfolio(filter = 'all') {
+            const grid = document.getElementById('portfolioGrid');
+            grid.innerHTML = '';
+
+            const filtered = filter === 'all'
+                ? projectsData
+                : projectsData.filter(p => p.category.toLowerCase() === filter.toLowerCase());
+
+            filtered.forEach(project => {
+                const card = document.createElement('div');
+                card.className = 'card-3d reticle-corners rounded-3xl p-7 sm:p-8 flex flex-col justify-between space-y-6 cursor-pointer group';
+                card.onclick = () => openModal(project);
+
+                card.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="px-3 py-1 rounded-lg text-xs font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">${project.category}</span>
+                            <span class="text-xs font-mono font-bold text-amber-700">${project.metric}</span>
+                        </div>
+                        <h3 class="font-display font-bold text-xl sm:text-2xl text-slate-900 group-hover:text-emerald-700 transition-colors">${project.title}</h3>
+                        <p class="text-xs font-mono text-slate-500">${project.client}</p>
+                        <p class="text-sm text-slate-600 leading-relaxed line-clamp-2">${project.challenge}</p>
+                    </div>
+                    <div class="flex items-center justify-between pt-4 border-t border-emerald-500/20">
+                        <div class="flex flex-wrap gap-1.5">
+                            ${project.tags.slice(0, 2).map(t => `<span class="px-2.5 py-0.5 rounded text-[11px] font-mono bg-slate-100 text-slate-700 border border-slate-200">${t}</span>`).join('')}
+                        </div>
+                        <span class="text-xs font-mono font-bold text-amber-700 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                            <span>Inspect</span>
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function openModal(project) {
+            document.getElementById('modalCategory').textContent = project.category;
+            document.getElementById('modalTitle').textContent = project.title;
+            document.getElementById('modalClient').textContent = 'Client: ' + project.client + ' • ' + project.metric;
+            document.getElementById('modalChallenge').textContent = project.challenge;
+            document.getElementById('modalSolution').textContent = project.solution;
+
+            const tagsBox = document.getElementById('modalTags');
+            tagsBox.innerHTML = project.tags.map(t => `<span class="px-3 py-1 rounded-lg text-xs font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">${t}</span>`).join('');
+
+            document.getElementById('caseStudyModal').classList.remove('hidden');
+            document.getElementById('caseStudyModal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('caseStudyModal').classList.remove('flex');
+            document.getElementById('caseStudyModal').classList.add('hidden');
+        }
+
+        window.onload = function () {
+            if (window.lucide) window.lucide.createIcons();
+            init3DSurveyBackground();
+            init3DCardTilt();
+            initCivilTools();
+            renderPortfolio('all');
+
+            const switchBtn = document.getElementById('switchSurveyModeBtn');
+            if (switchBtn) {
+                switchBtn.addEventListener('click', () => {
+                    currentSurveyModeIndex = (currentSurveyModeIndex + 1) % surveyModes.length;
+                    const mode = surveyModes[currentSurveyModeIndex];
+                    document.getElementById('heroModeSubtitle').textContent = mode.subtitle;
+                    document.getElementById('heroAccuracyBadge').textContent = mode.accuracy;
+                    document.getElementById('heroInstrumentName').textContent = mode.instrument;
+                    document.getElementById('heroDeliverableName').textContent = mode.deliverable;
+                });
+            }
+
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileMenu = document.getElementById('mobileMenu');
+            mobileMenuBtn.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+            document.querySelectorAll('.mobile-nav-link').forEach(link => {
+                link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+            });
+
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.filter-btn').forEach(b => {
+                        b.classList.remove('btn-3d-survey', 'text-white', 'font-bold');
+                        b.classList.add('panel-3d', 'text-slate-700', 'font-semibold');
+                    });
+                    e.target.classList.remove('panel-3d', 'text-slate-700', 'font-semibold');
+                    e.target.classList.add('btn-3d-survey', 'text-white', 'font-bold');
+                    renderPortfolio(e.target.dataset.filter);
+                });
+            });
+
+            document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+            document.getElementById('caseStudyModal').addEventListener('click', (e) => {
+                if (e.target.id === 'caseStudyModal') closeModal();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeModal();
+            });
+
+            const inquiryForm = document.getElementById('inquiryForm');
+            const formSuccess = document.getElementById('formSuccess');
+            const resetFormBtn = document.getElementById('resetFormBtn');
+
+            inquiryForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                inquiryForm.classList.add('hidden');
+                formSuccess.classList.remove('hidden');
+                if (window.lucide) window.lucide.createIcons();
+            });
+
+            resetFormBtn.addEventListener('click', () => {
+                inquiryForm.reset();
+                formSuccess.classList.add('hidden');
+                inquiryForm.classList.remove('hidden');
+            });
+        };
+    </script>
+</body>
+
+</html>
